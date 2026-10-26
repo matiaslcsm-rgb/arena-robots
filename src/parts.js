@@ -1,95 +1,90 @@
-// El catálogo de piezas. Solo datos y cuentas (sin three.js), así se prueba con node.
+// El robot: un esqueleto articulado (siempre el mismo) y las piezas que se le enganchan. Solo datos y cuentas (sin
+// three.js), así se prueba con node.
 //
-// Cada pieza tiene sus números y su forma: una lista de cajas y cilindros (en metros) que robot.js convierte en 3D.
-//   box: { t: 'box', s: [ancho, alto, fondo], p: [x, y, z], r?: [rx, ry, rz], m: material, g?: grupo que se anima }
-//   cyl: { t: 'cyl', rad, h, seg?, p, r?, m, g? }
-// Materiales: gris, oliva, hueso, nar (naranja), ama (amarillo), carbon, metal, peligro (franjas), oruga, lente (brilla).
-// Los brazos se dibujan para el lado derecho (x hacia afuera); el izquierdo es su espejo.
+// EL ESQUELETO (skeleton.js lo dibuja): pelvis → columna → pecho → cuello → cabeza; en el pecho, los hombros →
+// brazo → antebrazo → mano (con dedos); en la pelvis, las caderas → muslo → canilla → pie. Cada hueso nace en su
+// articulación y los de brazos y piernas cuelgan para abajo (-y).
+//
+// LAS PIEZAS se enganchan a los huesos. Cada forma dice a qué hueso va (b) y dónde, medido desde la articulación:
+//   box: { t: 'box', s: [ancho, alto, fondo], p: [x, y, z], r?: [rx, ry, rz], m: material, b: hueso }
+//   cyl: { t: 'cyl', rad, h, seg?, p, r?, m, b }
+// En brazos y piernas, x positivo es "hacia afuera": el lado izquierdo y el derecho son espejo. Las piernas se ponen en
+// los dos lados; cada brazo, en el suyo.
+// Materiales: gris, oliva, hueso, nar, ama, carbon, metal, peligro (franjas), oruga, lente (brilla), hierro, junta, cobre.
 
 export const SLOTS = ['legs', 'core', 'head', 'armL', 'armR'];
 export const SLOT_NAMES = { legs: 'Piernas', core: 'Núcleo', head: 'Cabeza', armL: 'Brazo izq.', armR: 'Brazo der.' };
+export const BONES = ['pelvis', 'spine', 'chest', 'neck', 'head', 'shoulder', 'upperArm', 'forearm', 'hand', 'thigh', 'shin', 'foot'];
+export const LIMB_BONES = { legs: ['thigh', 'shin', 'foot'], arm: ['shoulder', 'upperArm', 'forearm', 'hand'] };
 const ARM_SLOTS = ['armL', 'armR'];
 
 export const PARTS = {
+    // gait: cómo camina (walk: paso normal · heavy: paso corto y pesado · glide: patina)
     legs: {
         bipedo: {
-            name: 'Bípedo B-12', weight: 28, armor: 300, maxLoad: 70, speed: 9, jump: 1, hip: 2.2,
-            pivots: { legL: [-0.55, 2.2, 0], legR: [0.55, 2.2, 0] },
+            name: 'Bípedo B-12', weight: 28, armor: 300, maxLoad: 70, speed: 9, jump: 1, gait: 'walk',
             shapes: [
-                { t: 'box', s: [1.7, 0.5, 1.1], p: [0, 2.2, 0], m: 'carbon' },
-                { t: 'box', s: [1.8, 0.12, 1.15], p: [0, 2.0, 0], m: 'peligro' },
-                ...[-1, 1].flatMap(k => {
-                    const x = 0.55 * k, g = k < 0 ? 'legL' : 'legR';
-                    return [
-                        { t: 'cyl', rad: 0.28, h: 0.5, p: [x, 2.2, 0], r: [0, 0, Math.PI / 2], m: 'nar', g },
-                        { t: 'box', s: [0.5, 1.1, 0.6], p: [x, 1.6, 0], m: 'oliva', g },
-                        { t: 'cyl', rad: 0.08, h: 0.9, p: [x, 1.2, -0.38], m: 'metal', g },   // el pistón de atrás
-                        { t: 'cyl', rad: 0.22, h: 0.55, p: [x, 1.05, 0], r: [0, 0, Math.PI / 2], m: 'carbon', g },
-                        { t: 'box', s: [0.42, 0.95, 0.5], p: [x, 0.55, 0.08], m: 'gris', g },
-                        { t: 'box', s: [0.65, 0.22, 1.0], p: [x, 0.11, 0.15], m: 'carbon', g }
-                    ];
-                })
+                { t: 'box', s: [0.42, 0.18, 0.34], p: [0, -0.02, 0], m: 'oliva', b: 'pelvis' },
+                { t: 'box', s: [0.44, 0.05, 0.36], p: [0, -0.12, 0], m: 'peligro', b: 'pelvis' },
+                { t: 'box', s: [0.2, 0.5, 0.1], p: [0, -0.4, 0.09], m: 'oliva', b: 'thigh' },
+                { t: 'box', s: [0.12, 0.12, 0.08], p: [0, -0.86, 0.11], m: 'nar', b: 'thigh' },     // rodillera
+                { t: 'box', s: [0.15, 0.48, 0.08], p: [0, -0.42, 0.08], m: 'gris', b: 'shin' }
             ]
         },
         oruga: {
-            name: 'Oruga T-40', weight: 46, armor: 620, maxLoad: 115, speed: 6, jump: 0, hip: 1.55,
-            pivots: { tracks: [0, 0, 0] },
+            name: 'Oruga T-40', weight: 46, armor: 620, maxLoad: 115, speed: 6, jump: 0, gait: 'heavy',
             shapes: [
-                ...[-1, 1].flatMap(k => [
-                    { t: 'box', s: [0.85, 0.95, 2.8], p: [0.95 * k, 0.48, 0], m: 'oruga', g: 'tracks' },
-                    { t: 'box', s: [0.9, 0.3, 2.3], p: [0.95 * k, 1.05, 0], m: 'oliva' },
-                    { t: 'box', s: [0.92, 0.1, 2.3], p: [0.95 * k, 0.88, 0], m: 'peligro' }
-                ]),
-                { t: 'box', s: [1.3, 0.6, 1.8], p: [0, 1.2, 0], m: 'carbon' },
-                { t: 'box', s: [1.0, 0.2, 1.0], p: [0, 1.55, 0], m: 'gris' }
+                { t: 'box', s: [0.5, 0.22, 0.4], p: [0, -0.02, 0], m: 'gris', b: 'pelvis' },
+                { t: 'box', s: [0.26, 0.55, 0.16], p: [0.02, -0.4, 0.06], m: 'oliva', b: 'thigh' },
+                { t: 'box', s: [0.3, 0.62, 0.55], p: [0.03, -0.55, 0.04], m: 'oruga', b: 'shin' },   // el módulo de oruga
+                { t: 'box', s: [0.32, 0.08, 0.5], p: [0.03, -0.2, 0.04], m: 'peligro', b: 'shin' },
+                { t: 'box', s: [0.3, 0.16, 0.5], p: [0.03, -0.05, 0.08], m: 'carbon', b: 'foot' }
             ]
         },
         ruedas: {
-            name: 'Ruedas R-3', weight: 22, armor: 200, maxLoad: 55, speed: 13, jump: 0.5, hip: 1.8,
-            pivots: { wheels: [0, 0, 0] },
+            name: 'Ruedas R-3', weight: 22, armor: 200, maxLoad: 55, speed: 13, jump: 0.5, gait: 'glide',
             shapes: [
-                { t: 'box', s: [1.5, 0.45, 1.6], p: [0, 1.5, 0], m: 'gris' },
-                { t: 'box', s: [1.55, 0.1, 1.65], p: [0, 1.3, 0], m: 'peligro' },
-                ...[[-1, -1], [1, -1], [-1, 1], [1, 1]].flatMap(([kx, kz]) => [
-                    { t: 'box', s: [0.18, 1.1, 0.18], p: [0.75 * kx, 0.95, 0.65 * kz], r: [0, 0, 0.35 * kx], m: 'carbon' },
-                    { t: 'cyl', rad: 0.45, h: 0.35, seg: 8, p: [1.0 * kx, 0.45, 0.65 * kz], r: [0, 0, Math.PI / 2], m: 'carbon', g: 'wheels' },
-                    { t: 'cyl', rad: 0.15, h: 0.38, p: [1.0 * kx, 0.45, 0.65 * kz], r: [0, 0, Math.PI / 2], m: 'nar', g: 'wheels' }
-                ])
+                { t: 'box', s: [0.36, 0.14, 0.28], p: [0, -0.02, 0], m: 'hueso', b: 'pelvis' },
+                { t: 'box', s: [0.13, 0.4, 0.07], p: [0, -0.45, 0.08], m: 'hueso', b: 'shin' },
+                { t: 'box', s: [0.1, 0.05, 0.4], p: [0, -0.15, 0.06], m: 'carbon', b: 'foot' },        // el patín
+                { t: 'cyl', rad: 0.08, h: 0.08, seg: 8, p: [0, -0.2, 0.22], r: [0, 0, Math.PI / 2], m: 'carbon', b: 'foot', wheel: true },
+                { t: 'cyl', rad: 0.08, h: 0.08, seg: 8, p: [0, -0.2, -0.08], r: [0, 0, Math.PI / 2], m: 'carbon', b: 'foot', wheel: true },
+                { t: 'cyl', rad: 0.03, h: 0.09, p: [0, -0.2, 0.22], r: [0, 0, Math.PI / 2], m: 'nar', b: 'foot', wheel: true },
+                { t: 'cyl', rad: 0.03, h: 0.09, p: [0, -0.2, -0.08], r: [0, 0, Math.PI / 2], m: 'nar', b: 'foot', wheel: true }
             ]
         }
     },
     core: {
         estandar: {
             name: 'Núcleo C-20', weight: 30, armor: 500, energy: 1000, regen: 120,
-            neck: [0, 1.45, 0], armL: [-1.05, 1.1, 0], armR: [1.05, 1.1, 0],
             shapes: [
-                { t: 'box', s: [1.8, 1.4, 1.3], p: [0, 0.75, 0], m: 'oliva' },
-                { t: 'box', s: [1.1, 0.55, 0.1], p: [0, 0.95, 0.68], m: 'hueso' },
-                { t: 'box', s: [1.82, 0.16, 1.32], p: [0, 0.15, 0], m: 'peligro' },
-                { t: 'box', s: [1.2, 1.0, 0.55], p: [0, 0.8, -0.9], m: 'carbon' },          // la mochila
-                { t: 'cyl', rad: 0.12, h: 1.0, p: [0.45, 0.8, -1.2], m: 'ama' },            // cables de la mochila
-                { t: 'cyl', rad: 0.12, h: 1.0, p: [-0.45, 0.8, -1.2], m: 'ama' }
+                { t: 'box', s: [0.62, 0.4, 0.08], p: [0, 0.24, 0.2], m: 'oliva', b: 'chest' },
+                { t: 'box', s: [0.64, 0.06, 0.09], p: [0, 0.03, 0.2], m: 'peligro', b: 'chest' },
+                { t: 'box', s: [0.42, 0.5, 0.24], p: [0, 0.22, -0.24], m: 'carbon', b: 'chest' },        // la mochila
+                { t: 'cyl', rad: 0.04, h: 0.45, p: [0.12, 0.2, -0.4], m: 'ama', b: 'chest' },
+                { t: 'cyl', rad: 0.04, h: 0.45, p: [-0.12, 0.2, -0.4], m: 'ama', b: 'chest' },
+                { t: 'box', s: [0.26, 0.12, 0.3], p: [0.42, 0.5, 0], m: 'oliva', b: 'chest' },           // hombreras
+                { t: 'box', s: [0.26, 0.12, 0.3], p: [-0.42, 0.5, 0], m: 'oliva', b: 'chest' }
             ]
         },
         pesado: {
             name: 'Núcleo H-55', weight: 48, armor: 920, energy: 900, regen: 100,
-            neck: [0, 1.75, 0], armL: [-1.3, 1.35, 0], armR: [1.3, 1.35, 0],
             shapes: [
-                { t: 'box', s: [2.3, 1.7, 1.6], p: [0, 0.9, 0], m: 'gris' },
-                { t: 'box', s: [2.4, 0.5, 1.7], p: [0, 1.5, 0], m: 'oliva' },
-                { t: 'box', s: [1.4, 0.7, 0.12], p: [0, 0.8, 0.84], m: 'carbon' },
-                { t: 'box', s: [2.32, 0.18, 1.62], p: [0, 0.18, 0], m: 'peligro' },
-                { t: 'box', s: [1.6, 1.2, 0.6], p: [0, 1.0, -1.1], m: 'carbon' }
+                { t: 'box', s: [0.8, 0.55, 0.5], p: [0, 0.25, 0], m: 'gris', b: 'chest' },
+                { t: 'box', s: [0.84, 0.16, 0.54], p: [0, 0.5, 0], m: 'oliva', b: 'chest' },
+                { t: 'box', s: [0.82, 0.07, 0.52], p: [0, 0.02, 0], m: 'peligro', b: 'chest' },
+                { t: 'box', s: [0.55, 0.6, 0.3], p: [0, 0.25, -0.38], m: 'carbon', b: 'chest' },
+                { t: 'box', s: [0.34, 0.18, 0.42], p: [0.48, 0.5, 0], m: 'oliva', b: 'chest' },
+                { t: 'box', s: [0.34, 0.18, 0.42], p: [-0.48, 0.5, 0], m: 'oliva', b: 'chest' },
+                { t: 'box', s: [0.3, 0.3, 0.16], p: [0, 0.22, 0.12], m: 'carbon', b: 'spine' }          // faja
             ]
         },
         liviano: {
             name: 'Núcleo L-08', weight: 18, armor: 280, energy: 1250, regen: 165,
-            neck: [0, 1.2, 0], armL: [-0.85, 0.9, 0], armR: [0.85, 0.9, 0],
             shapes: [
-                { t: 'box', s: [1.4, 1.1, 1.0], p: [0, 0.6, 0], m: 'hueso' },
-                { t: 'box', s: [0.9, 0.3, 0.08], p: [0, 0.7, 0.52], m: 'nar' },
-                { t: 'box', s: [1.42, 0.12, 1.02], p: [0, 0.1, 0], m: 'peligro' },
-                { t: 'cyl', rad: 0.3, h: 0.9, p: [0, 0.7, -0.65], m: 'carbon' }             // la batería
+                { t: 'box', s: [0.42, 0.3, 0.06], p: [0, 0.26, 0.19], m: 'hueso', b: 'chest' },
+                { t: 'box', s: [0.3, 0.06, 0.07], p: [0, 0.32, 0.22], m: 'nar', b: 'chest' },
+                { t: 'cyl', rad: 0.12, h: 0.42, p: [0, 0.24, -0.24], m: 'carbon', b: 'chest' }          // la batería
             ]
         }
     },
@@ -97,60 +92,61 @@ export const PARTS = {
         sensor: {
             name: 'Cabeza S-1', weight: 4, armor: 80,
             shapes: [
-                { t: 'box', s: [0.75, 0.5, 0.75], p: [0, 0.3, 0], m: 'gris' },
-                { t: 'box', s: [0.5, 0.14, 0.06], p: [0, 0.35, 0.39], m: 'lente' },
-                { t: 'box', s: [0.05, 0.6, 0.05], p: [0.28, 0.8, -0.2], m: 'carbon' },
-                { t: 'box', s: [0.1, 0.1, 0.1], p: [0.28, 1.1, -0.2], m: 'nar' }
+                { t: 'box', s: [0.32, 0.26, 0.34], p: [0, 0.14, 0.02], m: 'hierro', b: 'head' },
+                { t: 'box', s: [0.34, 0.1, 0.12], p: [0, 0.16, 0.16], m: 'cobre', b: 'head' },            // el visor
+                { t: 'box', s: [0.22, 0.05, 0.02], p: [0, 0.16, 0.225], m: 'lente', b: 'head' },
+                { t: 'box', s: [0.03, 0.25, 0.03], p: [0.12, 0.38, -0.1], m: 'junta', b: 'head' }
             ]
         },
         camara: {
             name: 'Cabeza TV-4', weight: 6, armor: 100,
             shapes: [
-                { t: 'box', s: [0.6, 0.55, 0.95], p: [0, 0.32, -0.05], m: 'hueso' },
-                { t: 'cyl', rad: 0.2, h: 0.45, p: [0, 0.32, 0.6], r: [Math.PI / 2, 0, 0], m: 'carbon' },
-                { t: 'cyl', rad: 0.16, h: 0.04, p: [0, 0.32, 0.84], r: [Math.PI / 2, 0, 0], m: 'lente' },
-                { t: 'box', s: [0.08, 0.15, 0.7], p: [0, 0.68, -0.05], m: 'carbon' },        // la manija
-                { t: 'box', s: [0.1, 0.1, 0.1], p: [-0.25, 0.5, 0.42], m: 'nar' }            // luz de "grabando"
+                { t: 'box', s: [0.28, 0.26, 0.42], p: [0, 0.15, -0.02], m: 'hueso', b: 'head' },
+                { t: 'cyl', rad: 0.09, h: 0.2, p: [0, 0.15, 0.28], r: [Math.PI / 2, 0, 0], m: 'carbon', b: 'head' },
+                { t: 'cyl', rad: 0.07, h: 0.02, p: [0, 0.15, 0.39], r: [Math.PI / 2, 0, 0], m: 'lente', b: 'head' },
+                { t: 'box', s: [0.04, 0.07, 0.3], p: [0, 0.32, -0.02], m: 'carbon', b: 'head' },
+                { t: 'box', s: [0.05, 0.05, 0.05], p: [-0.11, 0.24, 0.19], m: 'nar', b: 'head' }
             ]
         },
         domo: {
             name: 'Cabeza D-9', weight: 7, armor: 160,
             shapes: [
-                { t: 'cyl', rad: 0.5, h: 0.55, seg: 6, p: [0, 0.3, 0], m: 'oliva' },
-                { t: 'cyl', rad: 0.51, h: 0.12, seg: 6, p: [0, 0.38, 0], m: 'lente' },
-                { t: 'cyl', rad: 0.35, h: 0.15, seg: 6, p: [0, 0.65, 0], m: 'carbon' }
+                { t: 'cyl', rad: 0.22, h: 0.26, seg: 6, p: [0, 0.14, 0], m: 'oliva', b: 'head' },
+                { t: 'cyl', rad: 0.225, h: 0.06, seg: 6, p: [0, 0.18, 0], m: 'lente', b: 'head' },
+                { t: 'cyl', rad: 0.15, h: 0.07, seg: 6, p: [0, 0.3, 0], m: 'carbon', b: 'head' }
             ]
         }
     },
+    // pose: aim (antebrazo al frente, apuntando) · free (cuelga y se hamaca al caminar). hideHand: tapa la mano.
     arm: {
         canon: {
-            name: 'Cañón K-90', weight: 14, armor: 120, kind: 'cañón',
+            name: 'Cañón K-90', weight: 14, armor: 120, kind: 'cañón', pose: 'aim',
             shapes: [
-                { t: 'box', s: [0.6, 0.65, 0.7], p: [0.3, 0, 0], m: 'oliva' },
-                { t: 'box', s: [0.45, 0.45, 1.0], p: [0.45, -0.35, 0.4], m: 'gris' },
-                { t: 'cyl', rad: 0.17, h: 1.8, p: [0.45, -0.35, 1.5], r: [Math.PI / 2, 0, 0], m: 'carbon' },
-                { t: 'box', s: [0.42, 0.42, 0.3], p: [0.45, -0.35, 2.35], m: 'metal' },
-                { t: 'box', s: [0.47, 0.1, 0.5], p: [0.45, -0.1, 0.4], m: 'peligro' }
+                { t: 'box', s: [0.14, 0.4, 0.14], p: [0.02, -0.3, 0.08], m: 'oliva', b: 'upperArm' },
+                { t: 'box', s: [0.2, 0.5, 0.2], p: [0.02, -0.35, 0.1], m: 'gris', b: 'forearm' },
+                { t: 'cyl', rad: 0.06, h: 0.75, p: [0.02, -0.95, 0.1], m: 'carbon', b: 'forearm' },   // el caño, a lo largo del antebrazo
+                { t: 'box', s: [0.15, 0.1, 0.15], p: [0.02, -1.32, 0.1], m: 'metal', b: 'forearm' },
+                { t: 'box', s: [0.21, 0.05, 0.21], p: [0.02, -0.15, 0.1], m: 'peligro', b: 'forearm' }
             ]
         },
         ametralladora: {
-            name: 'Ametralladora M-6', weight: 10, armor: 100, kind: 'ametralladora',
+            name: 'Ametralladora M-6', weight: 10, armor: 100, kind: 'ametralladora', pose: 'aim',
             shapes: [
-                { t: 'box', s: [0.55, 0.55, 0.6], p: [0.28, 0, 0], m: 'gris' },
-                { t: 'box', s: [0.4, 0.4, 1.1], p: [0.45, -0.3, 0.55], m: 'carbon' },
-                ...[-0.1, 0, 0.1].map(dx => ({ t: 'cyl', rad: 0.05, h: 0.8, p: [0.45 + dx, -0.25 - Math.abs(dx), 1.45], r: [Math.PI / 2, 0, 0], m: 'metal' })),
-                { t: 'cyl', rad: 0.28, h: 0.25, p: [0.45, -0.62, 0.45], m: 'ama' }           // el tambor de balas
+                { t: 'box', s: [0.13, 0.35, 0.13], p: [0.02, -0.3, 0.07], m: 'gris', b: 'upperArm' },
+                { t: 'box', s: [0.15, 0.45, 0.15], p: [0.02, -0.35, 0.09], m: 'carbon', b: 'forearm' },
+                ...[-0.04, 0, 0.04].map(dx => ({ t: 'cyl', rad: 0.018, h: 0.4, p: [0.02 + dx, -0.78, 0.09 + Math.abs(dx)], m: 'metal', b: 'forearm' })),
+                { t: 'cyl', rad: 0.1, h: 0.09, p: [0.13, -0.35, 0.09], r: [0, 0, Math.PI / 2], m: 'ama', b: 'forearm' }   // el tambor
             ]
         },
         pinza: {
-            name: 'Pinza P-2', weight: 9, armor: 140, kind: 'cuerpo a cuerpo',
+            name: 'Pinza P-2', weight: 9, armor: 140, kind: 'cuerpo a cuerpo', pose: 'free', hideHand: true,
             shapes: [
-                { t: 'box', s: [0.55, 0.55, 0.55], p: [0.28, 0, 0], m: 'oliva' },
-                { t: 'box', s: [0.35, 0.9, 0.35], p: [0.45, -0.6, 0.1], m: 'carbon' },
-                { t: 'cyl', rad: 0.08, h: 0.8, p: [0.62, -0.55, 0.1], m: 'metal' },
-                { t: 'box', s: [0.4, 0.35, 0.6], p: [0.45, -1.15, 0.3], m: 'gris' },
-                { t: 'box', s: [0.1, 0.12, 0.7], p: [0.32, -1.25, 0.85], m: 'nar' },
-                { t: 'box', s: [0.1, 0.12, 0.7], p: [0.58, -1.25, 0.85], m: 'nar' }
+                { t: 'box', s: [0.14, 0.4, 0.14], p: [0.02, -0.3, 0.06], m: 'oliva', b: 'upperArm' },
+                { t: 'cyl', rad: 0.025, h: 0.5, p: [0.09, -0.35, -0.05], m: 'metal', b: 'forearm' },     // pistón
+                { t: 'box', s: [0.18, 0.14, 0.2], p: [0, -0.06, 0.02], m: 'gris', b: 'hand' },
+                { t: 'box', s: [0.05, 0.3, 0.06], p: [-0.05, -0.26, 0.08], r: [0.25, 0, 0], m: 'nar', b: 'hand' },
+                { t: 'box', s: [0.05, 0.3, 0.06], p: [0.07, -0.26, 0.08], r: [0.25, 0, 0], m: 'nar', b: 'hand' },
+                { t: 'box', s: [0.05, 0.26, 0.06], p: [0.01, -0.24, -0.06], r: [-0.3, 0, 0], m: 'nar', b: 'hand' }
             ]
         }
     }

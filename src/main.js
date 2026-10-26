@@ -58,13 +58,14 @@ addEventListener('mousemove', e => {
     if (document.pointerLockElement !== canvas || garage) return;
     me.yaw -= e.movementX * 0.0025; me.pitch = Math.max(-0.2, Math.min(0.9, me.pitch + e.movementY * 0.002));
 });
+const lockMouse = () => { const p = canvas.requestPointerLock(); if (p && p.catch) p.catch(() => {}); }; // si el navegador no deja, se juega igual
 const overlay = document.getElementById('overlay');
-overlay.addEventListener('click', () => { started = true; overlay.hidden = true; canvas.requestPointerLock(); });
-canvas.addEventListener('click', () => { if (started && !garage) canvas.requestPointerLock(); });
+overlay.addEventListener('click', () => { started = true; overlay.hidden = true; lockMouse(); });
+canvas.addEventListener('click', () => { if (started && !garage) lockMouse(); });
 function toggleGarage() {
     garage = !garage;
     if (garage) { document.exitPointerLock(); openGarage(build, setBuild, toggleGarage); camera.setViewOffset(320, 240, -70, 0, 320, 240); } // el robot, a la derecha del panel
-    else { closeGarage(); camera.clearViewOffset(); canvas.requestPointerLock(); }
+    else { closeGarage(); camera.clearViewOffset(); lockMouse(); }
 }
 
 // --- EL PASO DEL JUEGO ---
@@ -100,8 +101,8 @@ function step(dt) {
 }
 // Cámara en tercera persona, detrás y arriba; en el garaje da vueltas alrededor del robot
 function placeCamera(dt, t) {
-    const look = me.pos.clone().add(new THREE.Vector3(0, 3, 0));
-    const yaw = garage ? t * 0.4 : me.yaw, dist = garage ? 8 : 10, pitch = garage ? 0.25 : me.pitch;
+    const look = me.pos.clone().add(new THREE.Vector3(0, garage ? 2 : 2.6, 0));
+    const yaw = garage ? t * 0.4 : me.yaw, dist = garage ? 4.6 : 6.5, pitch = garage ? 0.15 : me.pitch;
     const want = look.clone().add(new THREE.Vector3(-Math.sin(yaw) * Math.cos(pitch) * dist, Math.sin(pitch) * dist + 1, -Math.cos(yaw) * Math.cos(pitch) * dist));
     camera.position.lerp(want, garage ? 1 : 1 - Math.exp(-12 * dt));
     camera.lookAt(look);

@@ -77,9 +77,12 @@ export function wallTex() { return plate('#7d8386', 31); }
 const MATS = {};
 export function mat(name) {
     if (MATS[name]) return MATS[name];
-    const P = { gris: '#7d8386', oliva: '#6c7448', hueso: '#d2cdbb', nar: '#f27a1a', ama: '#f2c21a', carbon: '#3a3e43', metal: '#a2a8ad' };
+    const P = { gris: '#7d8386', oliva: '#6c7448', hueso: '#d2cdbb', nar: '#f27a1a', ama: '#f2c21a', carbon: '#3a3e43', metal: '#a2a8ad',
+        hierro: '#4a4e54', junta: '#2c2f33', cobre: '#a8643a' }; // hierro, junta y cobre: el esqueleto
+    const WIRES = { cableR: '#b8352c', cableV: '#3f8a3a', cableA: '#2f56a8' };
     let m;
-    if (name === 'peligro') m = new THREE.MeshLambertMaterial({ map: hazard() });
+    if (WIRES[name]) m = new THREE.MeshLambertMaterial({ color: WIRES[name] });
+    else if (name === 'peligro') m = new THREE.MeshLambertMaterial({ map: hazard() });
     else if (name === 'oruga') m = new THREE.MeshLambertMaterial({ map: tread() });
     else if (name === 'lente') m = new THREE.MeshBasicMaterial({ color: '#3cd8f0' });            // brilla: no le afecta la luz
     else m = new THREE.MeshLambertMaterial({ map: plate(P[name], name.length * 97 + 13) });

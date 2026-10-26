@@ -3,6 +3,8 @@
 Un juego de batalla de robots armados por piezas, en 3D con estilo de PlayStation 1. Hecho desde cero (2026-10-26).
 Por ahora: una arena vacía y tu robot, que se arma en el garaje.
 
+**Jugar online:** https://matiaslcsm-rgb.github.io/arena-robots/
+
 ## Cómo jugar
 Los módulos de JavaScript no andan abriendo el archivo directo: hace falta un servidor local.
 

@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Arena de Robots</title>
+    <link rel="stylesheet" href="style.css">
+    <script type="importmap">
+        { "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js" } }
+    </script>
+</head>
+<body>
+    <div id="screen">
+        <canvas id="view"></canvas>
+        <div id="hud">
+            <div class="box">AP <b id="ap">00000</b></div>
+            <div class="box en">EN <div class="bar"><div id="en-fill"></div></div></div>
+            <div class="box">VEL <b id="spd">0 km/h</b></div>
+            <div class="box">CARGA <b id="load"></b></div>
+        </div>
+        <div id="garage" hidden></div>
+        <div id="overlay">
+            <h1>ARENA DE ROBOTS</h1>
+            <p>Clic para empezar</p>
+            <p class="keys">W A S D moverse · mouse mirar · Espacio saltar · Shift impulso · G garaje</p>
+        </div>
+    </div>
+    <script type="module" src="src/main.js"></script>
+</body>
+</html>
